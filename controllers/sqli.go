@@ -102,7 +102,7 @@ func SqlInjectionVuln4(c *gin.Context) {
 		return
 	}
 	defer db.Close()
-	expression := sq.Select("*").From("user").Where(sq.Eq{"username": username}).OrderBy(order)
+	expression := sq.Select("*").From("user").Where("hasAny(username,[" + username + "])").OrderBy(order)
 	sqlStr, args, err := expression.ToSql()
 	fmt.Println(sqlStr)
 	if err != nil {

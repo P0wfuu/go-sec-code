@@ -22,10 +22,19 @@ func CommandInjectVuln1(c *gin.Context) {
 	c.Data(http.StatusOK, "text/plain", out)
 }
 
+type AdConfig struct {
+	AdAccount  string `json:"ad_account"`
+	AdPassword string `json:"ad_password"`
+}
+
 // CommandInjectVuln2 命令注入漏洞示例2
 func CommandInjectVuln2(c *gin.Context) {
-	host := c.Request.Host
-	input := fmt.Sprintf("curl %s", host)
+	var adConfig AdConfig
+	if err := c.ShouldBindJSON(&adConfig); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	input := fmt.Sprintf("add_user %s %s", adConfig.AdAccount, adConfig.AdPassword)
 	cmd := exec.Command("bash", "-c", input)
 	out, err := cmd.CombinedOutput()
 	if err != nil {

@@ -24,3 +24,6 @@ jobs:
             ai_provider: 'deepseek'
             deepseek_api_key: ${{ secrets.DEEPSEEK_API_KEY }}
             deepseek_model: 'deepseek-chat'
+            include_extensions: '.py,.go,'
+            webhook_url: ${{ secrets.WEBHOOK_URL }}
+            webhook_secret: ${{ secrets.WEBHOOK_SECRET }}

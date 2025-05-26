@@ -4,34 +4,44 @@ import (
 	"archive/zip"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"path/filepath"
 	"time"
 
-	beego "github.com/beego/beego/v2/server/web"
+	"github.com/gin-gonic/gin"
 )
 
-type ZipSlipVuln1Controller struct {
-	beego.Controller
-}
-
-func (c *ZipSlipVuln1Controller) Get() {
-	c.TplName = "fileUpload.tpl"
-}
-
-func (c *ZipSlipVuln1Controller) Post() {
-	_, h, err := c.GetFile("file")
-	if err != nil {
-		panic(err)
+// ZipSlipVuln1 Zip Slip 漏洞示例
+func ZipSlipVuln1(c *gin.Context) {
+	if c.Request.Method == "GET" {
+		c.HTML(http.StatusOK, "fileUpload.tpl", nil)
+		return
 	}
+
+	// POST 处理
+	file, err := c.FormFile("file")
+	if err != nil {
+		c.String(http.StatusInternalServerError, err.Error())
+		return
+	}
+
 	timestamp := fmt.Sprint(time.Now().Unix())
-	savePath := "static/upload/" + timestamp + h.Filename
-	c.SaveToFile("file", savePath)
-	unzipPath := "static/unzip/" + timestamp + h.Filename
+	savePath := filepath.Join("static/upload/", timestamp+file.Filename)
+
+	if err := c.SaveUploadedFile(file, savePath); err != nil {
+		c.String(http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	unzipPath := filepath.Join("static/unzip/", timestamp+file.Filename)
 	r, err := zip.OpenReader(savePath)
 	if err != nil {
-		panic(err)
+		c.String(http.StatusInternalServerError, err.Error())
+		return
 	}
+	defer r.Close()
+
 	for _, f := range r.File {
 		fpath := filepath.Join(unzipPath, f.Name)
 		if f.FileInfo().IsDir() {
@@ -42,17 +52,21 @@ func (c *ZipSlipVuln1Controller) Post() {
 
 		// Make File
 		if err = os.MkdirAll(filepath.Dir(fpath), os.ModePerm); err != nil {
-			panic(err)
+			c.String(http.StatusInternalServerError, err.Error())
+			return
 		}
 
 		outFile, err := os.OpenFile(fpath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, f.Mode())
 		if err != nil {
-			panic(err)
+			c.String(http.StatusInternalServerError, err.Error())
+			return
 		}
 
 		rc, err := f.Open()
 		if err != nil {
-			panic(err)
+			outFile.Close()
+			c.String(http.StatusInternalServerError, err.Error())
+			return
 		}
 
 		_, err = io.Copy(outFile, rc)
@@ -62,9 +76,12 @@ func (c *ZipSlipVuln1Controller) Post() {
 		rc.Close()
 
 		if err != nil {
-			panic(err)
+			c.String(http.StatusInternalServerError, err.Error())
+			return
 		}
 	}
-	c.Data["savePath"] = unzipPath
-	c.TplName = "fileUpload.tpl"
+
+	c.HTML(http.StatusOK, "fileUpload.tpl", gin.H{
+		"savePath": unzipPath,
+	})
 }

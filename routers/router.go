@@ -3,49 +3,81 @@ package routers
 import (
 	"go-sec-code/controllers"
 
-	beego "github.com/beego/beego/v2/server/web"
+	"github.com/gin-gonic/gin"
 )
 
-func init() {
-	beego.Router("/", &controllers.MainController{})
-	beego.Router("/favicon.ico", &controllers.FaviconController{})
-	beego.Router("/commandInject/vuln", &controllers.CommandInjectVuln1Controller{})
-	beego.Router("/commandInject/vuln/host", &controllers.CommandInjectVuln2Controller{})
-	beego.Router("/commandInject/vuln/git", &controllers.CommandInjectVuln3Controller{})
-	beego.Router("/commandInject/safe", &controllers.CommandInjectSafe1Controller{})
-	beego.Router("/cors/vuln/reflect", &controllers.CorsVuln1Controller{})
-	beego.Router("/cors/vuln/any-origin-with-credential", &controllers.CorsVuln2Controller{})
-	beego.Router("/cors/safe", &controllers.CorsSafe1Controller{})
-	beego.Router("/crlfInjection/safe", &controllers.CRLFSafe1Controller{})
-	beego.Router("/fileUpload/vuln", &controllers.FileUploadVuln1Controller{})
-	beego.Router("/fileUpload/safe", &controllers.FileUploadSafe1Controller{})
-	beego.Router("/jsonp/vuln/noCheck", &controllers.JsonpVuln1Controller{})
-	beego.Router("/jsonp/vuln/emptyReferer", &controllers.JsonpVuln1Controller{})
-	beego.Router("/jsonp/safe", &controllers.JsonpSafe1Controller{})
-	beego.Router("/pathTraversal/vuln", &controllers.PathTraversalVuln1Controller{})
-	beego.Router("/pathTraversal/vuln/clean", &controllers.PathTraversalVuln2Controller{})
-	beego.Router("/pathTraversal/safe/filter", &controllers.PathTraversalSafe1Controller{})
-	beego.Router("/pathTraversal/safe/check", &controllers.PathTraversalSafe2Controller{})
-	beego.Router("/sqlInjection/native/vuln/integer", &controllers.SqlInjectionVuln1Controller{})
-	beego.Router("/sqlInjection/native/vuln/string", &controllers.SqlInjectionVuln2Controller{})
-	beego.Router("/sqlInjection/orm/vuln/xorm", &controllers.SqlInjectionVuln3Controller{})
-	beego.Router("/sqlInjection/generator/vuln/squirrel", &controllers.SqlInjectionVuln4Controller{})
-	beego.Router("/sqlInjection/native/safe/integer", &controllers.SqlInjectionSafe1Controller{})
-	beego.Router("/sqlInjection/native/safe/string", &controllers.SqlInjectionSafe2Controller{})
-	beego.Router("/sqlInjection/orm/safe/beego", &controllers.SqlInjectionSafe3Controller{})
-	beego.Router("/ssrf/vuln", &controllers.SSRFVuln1Controller{})
-	beego.Router("/ssrf/vuln/obfuscation", &controllers.SSRFVuln2Controller{})
-	beego.Router("/ssrf/vuln/302", &controllers.SSRFVuln3Controller{})
-	beego.Router("/ssrf/safe/whitelists", &controllers.SSRFSafe1Controller{})
-	beego.Router("/ssti/vuln", &controllers.SSTIVuln1Controller{})
-	beego.Router("/ssti/safe", &controllers.SSTISafe1Controller{})
-	beego.Router("/xss/vuln", &controllers.XSSVuln1Controller{})
-	beego.Router("/xss/vuln/store", &controllers.XSSVuln2Controller{})
-	beego.Router("/xss/vuln/svg", &controllers.XSSVuln3Controller{})
-	beego.Router("/xss/vuln/pdf", &controllers.XSSVuln4Controller{})
-	beego.Router("/xss/safe", &controllers.XSSSafe1Controller{})
-	beego.Router("/xss/safe/svg", &controllers.XSSSafe2Controller{})
-	beego.Router("/xxe/vuln", &controllers.XXEVuln1Controller{})
-	beego.Router("/xxe/safe", &controllers.XXESafe1Controller{})
-	beego.Router("/zipslip/vuln", &controllers.ZipSlipVuln1Controller{})
+// InitRoutes 初始化所有路由
+func InitRoutes(r *gin.Engine) {
+	// 静态文件
+	r.Static("/static", "./static")
+	r.StaticFile("/favicon.ico", "./favicon.ico")
+
+	// 设置模板路径
+	r.LoadHTMLGlob("views/*")
+
+	// 主页
+	r.GET("/", controllers.MainPage)
+
+	// 命令注入
+	r.GET("/commandInject/vuln", controllers.CommandInjectVuln1)
+	r.GET("/commandInject/vuln/host", controllers.CommandInjectVuln2)
+	r.GET("/commandInject/vuln/git", controllers.CommandInjectVuln3)
+	r.GET("/commandInject/safe", controllers.CommandInjectSafe1)
+
+	// CORS
+	r.GET("/cors/vuln/reflect", controllers.CorsVuln1)
+	r.GET("/cors/vuln/any-origin-with-credential", controllers.CorsVuln2)
+	r.GET("/cors/safe", controllers.CorsSafe1)
+
+	// CRLF注入
+	r.GET("/crlfInjection/safe", controllers.CRLFSafe1)
+
+	// 文件上传
+	r.GET("/fileUpload/vuln", controllers.FileUploadVuln1)
+	r.GET("/fileUpload/safe", controllers.FileUploadSafe1)
+
+	// JSONP
+	r.GET("/jsonp/vuln/noCheck", controllers.JsonpVuln1)
+	r.GET("/jsonp/vuln/emptyReferer", controllers.JsonpVuln1)
+	r.GET("/jsonp/safe", controllers.JsonpSafe1)
+
+	// 路径遍历
+	r.GET("/pathTraversal/vuln", controllers.PathTraversalVuln1)
+	r.GET("/pathTraversal/vuln/clean", controllers.PathTraversalVuln2)
+	r.GET("/pathTraversal/safe/filter", controllers.PathTraversalSafe1)
+	r.GET("/pathTraversal/safe/check", controllers.PathTraversalSafe2)
+
+	// SQL注入
+	r.GET("/sqlInjection/native/vuln/integer", controllers.SqlInjectionVuln1)
+	r.GET("/sqlInjection/native/vuln/string", controllers.SqlInjectionVuln2)
+	r.GET("/sqlInjection/orm/vuln/xorm", controllers.SqlInjectionVuln3)
+	r.GET("/sqlInjection/generator/vuln/squirrel", controllers.SqlInjectionVuln4)
+	r.GET("/sqlInjection/native/safe/integer", controllers.SqlInjectionSafe1)
+	r.GET("/sqlInjection/native/safe/string", controllers.SqlInjectionSafe2)
+	r.GET("/sqlInjection/orm/safe/beego", controllers.SqlInjectionSafe3)
+
+	// SSRF
+	r.GET("/ssrf/vuln", controllers.SSRFVuln1)
+	r.GET("/ssrf/vuln/obfuscation", controllers.SSRFVuln2)
+	r.GET("/ssrf/vuln/302", controllers.SSRFVuln3)
+	r.GET("/ssrf/safe/whitelists", controllers.SSRFSafe1)
+
+	// SSTI
+	r.GET("/ssti/vuln", controllers.SSTIVuln1)
+	r.GET("/ssti/safe", controllers.SSTISafe1)
+
+	// XSS
+	r.GET("/xss/vuln", controllers.XSSVuln1)
+	r.GET("/xss/vuln/store", controllers.XSSVuln2)
+	r.GET("/xss/vuln/svg", controllers.XSSVuln3)
+	r.GET("/xss/vuln/pdf", controllers.XSSVuln4)
+	r.GET("/xss/safe", controllers.XSSSafe1)
+	r.GET("/xss/safe/svg", controllers.XSSSafe2)
+
+	// XXE
+	r.GET("/xxe/vuln", controllers.XXEVuln1)
+	r.GET("/xxe/safe", controllers.XXESafe1)
+
+	// ZipSlip
+	r.GET("/zipslip/vuln", controllers.ZipSlipVuln1)
 }

@@ -2,72 +2,65 @@ package controllers
 
 import (
 	"go-sec-code/utils"
-	"io/ioutil"
+	"net/http"
+	"os"
 	"path/filepath"
 	"strings"
 
-	beego "github.com/beego/beego/v2/server/web"
+	"github.com/gin-gonic/gin"
 )
 
-type PathTraversalVuln1Controller struct {
-	beego.Controller
-}
-
-type PathTraversalVuln2Controller struct {
-	beego.Controller
-}
-
-type PathTraversalSafe1Controller struct {
-	beego.Controller
-}
-
-type PathTraversalSafe2Controller struct {
-	beego.Controller
-}
-
-func (c *PathTraversalVuln1Controller) Get() {
-	file := c.GetString("file")
-	output, err := ioutil.ReadFile(file)
+// PathTraversalVuln1 路径遍历漏洞示例1 - 无过滤
+func PathTraversalVuln1(c *gin.Context) {
+	file := c.Query("file")
+	output, err := os.ReadFile(file)
 	if err != nil {
-		panic(err)
+		c.String(http.StatusInternalServerError, err.Error())
+		return
 	}
-	c.Ctx.ResponseWriter.Write(output)
+	c.Data(http.StatusOK, "text/plain", output)
 }
 
-func (c *PathTraversalVuln2Controller) Get() {
-	file := c.GetString("file")
+// PathTraversalVuln2 路径遍历漏洞示例2 - 使用Clean但仍有漏洞
+func PathTraversalVuln2(c *gin.Context) {
+	file := c.Query("file")
 	file = filepath.Clean(file)
-	output, err := ioutil.ReadFile(file)
+	output, err := os.ReadFile(file)
 	if err != nil {
-		panic(err)
+		c.String(http.StatusInternalServerError, err.Error())
+		return
 	}
-	c.Ctx.ResponseWriter.Write(output)
+	c.Data(http.StatusOK, "text/plain", output)
 }
 
-func (c *PathTraversalSafe1Controller) Get() {
-	file := c.GetString("file")
+// PathTraversalSafe1 路径遍历安全示例1 - 使用过滤器
+func PathTraversalSafe1(c *gin.Context) {
+	file := c.Query("file")
 	pathTraversalFilter := utils.PathTraversalFilter{}
 	if pathTraversalFilter.DoFilter(file) {
-		c.Ctx.ResponseWriter.Write([]byte("evil input"))
+		c.String(http.StatusBadRequest, "evil input")
 	} else {
-		output, err := ioutil.ReadFile("static/" + file)
+		output, err := os.ReadFile("static/" + file)
 		if err != nil {
-			panic(err)
+			c.String(http.StatusInternalServerError, err.Error())
+			return
 		}
-		c.Ctx.ResponseWriter.Write(output)
+		c.Data(http.StatusOK, "text/plain", output)
 	}
 }
 
-func (c *PathTraversalSafe2Controller) Get() {
-	file := c.GetString("file")
+// PathTraversalSafe2 路径遍历安全示例2 - 路径检查
+func PathTraversalSafe2(c *gin.Context) {
+	file := c.Query("file")
 	file = filepath.Join("static/", file)
 	if !strings.HasPrefix(file, "static/") {
-		c.Ctx.ResponseWriter.Write([]byte("evil input"))
+		c.String(http.StatusBadRequest, "evil input")
 	} else {
-		output, err := ioutil.ReadFile(file)
+		output, err := os.ReadFile(file)
 		if err != nil {
-			panic(err)
+			c.String(http.StatusInternalServerError, err.Error())
+			return
 		}
-		c.Ctx.ResponseWriter.Write(output)
+		c.Data(http.StatusOK, "text/plain", output)
 	}
 }

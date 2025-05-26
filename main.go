@@ -1,11 +1,17 @@
 package main
 
 import (
-	_ "go-sec-code/routers"
-	beego "github.com/beego/beego/v2/server/web"
+	"go-sec-code/routers"
+
+	"github.com/gin-gonic/gin"
 )
 
 func main() {
-	beego.Run()
-}
+	r := gin.Default()
 
+	// 初始化路由
+	routers.InitRoutes(r)
+
+	// 启动服务器
+	r.Run()
+}

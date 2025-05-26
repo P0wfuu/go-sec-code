@@ -2,13 +2,13 @@ package controllers
 
 import (
 	"database/sql"
-	"encoding/json"
 	"fmt"
 	"go-sec-code/models"
+	"net/http"
+	"strconv"
 
 	sq "github.com/Masterminds/squirrel"
-	"github.com/beego/beego/v2/client/orm"
-	beego "github.com/beego/beego/v2/server/web"
+	"github.com/gin-gonic/gin"
 	_ "github.com/go-sql-driver/mysql"
 	"xorm.io/xorm"
 )
@@ -16,203 +16,183 @@ import (
 const source = "root:password@tcp(127.0.0.1:3306)/goseccode"
 
 func init() {
-	orm.RegisterDriver("mysql", orm.DRMySQL)
-	orm.RegisterDataBase("default", "mysql", source)
-	orm.Debug = true
+	// 移除 beego orm 初始化
 }
 
-type SqlInjectionVuln1Controller struct {
-	beego.Controller
-}
-
-type SqlInjectionVuln2Controller struct {
-	beego.Controller
-}
-
-type SqlInjectionVuln3Controller struct {
-	beego.Controller
-}
-
-type SqlInjectionVuln4Controller struct {
-	beego.Controller
-}
-
-type SqlInjectionSafe1Controller struct {
-	beego.Controller
-}
-
-type SqlInjectionSafe2Controller struct {
-	beego.Controller
-}
-
-type SqlInjectionSafe3Controller struct {
-	beego.Controller
-}
-
-func (c *SqlInjectionVuln1Controller) Get() {
-	id := c.GetString("id")
+// SqlInjectionVuln1 SQL注入漏洞示例1 - 整数型注入
+func SqlInjectionVuln1(c *gin.Context) {
+	id := c.Query("id")
 	db, err := sql.Open("mysql", source)
 	if err != nil {
-		panic(err)
+		c.String(http.StatusInternalServerError, err.Error())
+		return
 	}
 	err = db.Ping()
 	if err != nil {
-		panic(err)
+		c.String(http.StatusInternalServerError, err.Error())
+		return
 	}
 	defer db.Close()
 	sqlStr := fmt.Sprintf("select * from user where id=%s", id)
 	user := models.User{}
 	err = db.QueryRow(sqlStr).Scan(&user.Id, &user.Username, &user.Password)
 	if err != nil {
-		panic(err)
+		c.String(http.StatusInternalServerError, err.Error())
+		return
 	}
-	output, err := json.Marshal(user)
-	if err != nil {
-		panic(err)
-	}
-	c.Ctx.ResponseWriter.Write(output)
+	c.JSON(http.StatusOK, user)
 }
 
-func (c *SqlInjectionVuln2Controller) Get() {
-	username := c.GetString("username")
+// SqlInjectionVuln2 SQL注入漏洞示例2 - 字符型注入
+func SqlInjectionVuln2(c *gin.Context) {
+	username := c.Query("username")
 	db, err := sql.Open("mysql", source)
 	if err != nil {
-		panic(err)
+		c.String(http.StatusInternalServerError, err.Error())
+		return
 	}
 	err = db.Ping()
 	if err != nil {
-		panic(err)
+		c.String(http.StatusInternalServerError, err.Error())
+		return
 	}
 	defer db.Close()
 	sqlStr := fmt.Sprintf("select * from user where username=\"%s\"", username)
 	user := models.User{}
 	err = db.QueryRow(sqlStr).Scan(&user.Id, &user.Username, &user.Password)
 	if err != nil {
-		panic(err)
+		c.String(http.StatusInternalServerError, err.Error())
+		return
 	}
-	output, err := json.Marshal(user)
-	if err != nil {
-		panic(err)
-	}
-	c.Ctx.ResponseWriter.Write(output)
+	c.JSON(http.StatusOK, user)
 }
 
-func (c *SqlInjectionVuln3Controller) Get() {
-	username := c.GetString("username")
-	field := c.GetString("field")
+// SqlInjectionVuln3 SQL注入漏洞示例3 - ORM注入
+func SqlInjectionVuln3(c *gin.Context) {
+	username := c.Query("username")
+	field := c.Query("field")
 	engine, err := xorm.NewEngine("mysql", source)
 	if err != nil {
-		panic(err)
+		c.String(http.StatusInternalServerError, err.Error())
+		return
 	}
 	engine.ShowSQL(true)
 	user := models.User{}
 	session := engine.Prepare().And(fmt.Sprintf("%s like ?", field), username)
 	ok, err := session.Get(&user)
 	if !ok && err != nil {
-		panic(err)
+		c.String(http.StatusInternalServerError, err.Error())
+		return
 	}
-	output, err := json.Marshal(user)
-	if err != nil {
-		panic(err)
-	}
-	c.Ctx.ResponseWriter.Write(output)
+	c.JSON(http.StatusOK, user)
 }
 
-func (c *SqlInjectionVuln4Controller) Get() {
-	username := c.GetString("username")
-	order := c.GetString("order")
+// SqlInjectionVuln4 SQL注入漏洞示例4 - SQL生成器注入
+func SqlInjectionVuln4(c *gin.Context) {
+	username := c.Query("username")
+	order := c.Query("order")
 	db, err := sql.Open("mysql", source)
 	if err != nil {
-		panic(err)
+		c.String(http.StatusInternalServerError, err.Error())
+		return
 	}
 	err = db.Ping()
 	if err != nil {
-		panic(err)
+		c.String(http.StatusInternalServerError, err.Error())
+		return
 	}
 	defer db.Close()
 	expression := sq.Select("*").From("user").Where(sq.Eq{"username": username}).OrderBy(order)
 	sqlStr, args, err := expression.ToSql()
 	fmt.Println(sqlStr)
 	if err != nil {
-		panic(err)
+		c.String(http.StatusInternalServerError, err.Error())
+		return
 	}
 	user := models.User{}
 	err = db.QueryRow(sqlStr, args...).Scan(&user.Id, &user.Username, &user.Password)
 	if err != nil {
-		panic(err)
+		c.String(http.StatusInternalServerError, err.Error())
+		return
 	}
-	output, err := json.Marshal(user)
-	if err != nil {
-		panic(err)
-	}
-	c.Ctx.ResponseWriter.Write(output)
+	c.JSON(http.StatusOK, user)
 }
 
-func (c *SqlInjectionSafe1Controller) Get() {
-	id, err := c.GetInt("id", 1)
+// SqlInjectionSafe1 SQL注入安全示例1 - 整数参数化查询
+func SqlInjectionSafe1(c *gin.Context) {
+	idStr := c.DefaultQuery("id", "1")
+	id, err := strconv.Atoi(idStr)
 	if err != nil {
-		panic(err)
+		c.String(http.StatusBadRequest, "Invalid id parameter")
+		return
 	}
 	db, err := sql.Open("mysql", source)
 	if err != nil {
-		panic(err)
+		c.String(http.StatusInternalServerError, err.Error())
+		return
 	}
 	err = db.Ping()
 	if err != nil {
-		panic(err)
+		c.String(http.StatusInternalServerError, err.Error())
+		return
 	}
 	defer db.Close()
 	sqlStr := "select * from user where id=?"
 	user := models.User{}
 	err = db.QueryRow(sqlStr, id).Scan(&user.Id, &user.Username, &user.Password)
 	if err != nil {
-		panic(err)
+		c.String(http.StatusInternalServerError, err.Error())
+		return
 	}
-	output, err := json.Marshal(user)
-	if err != nil {
-		panic(err)
-	}
-	c.Ctx.ResponseWriter.Write(output)
+	c.JSON(http.StatusOK, user)
 }
 
-func (c *SqlInjectionSafe2Controller) Get() {
-	username := c.GetString("username")
+// SqlInjectionSafe2 SQL注入安全示例2 - 字符串参数化查询
+func SqlInjectionSafe2(c *gin.Context) {
+	username := c.Query("username")
 	db, err := sql.Open("mysql", source)
 	if err != nil {
-		panic(err)
+		c.String(http.StatusInternalServerError, err.Error())
+		return
 	}
 	err = db.Ping()
 	if err != nil {
-		panic(err)
+		c.String(http.StatusInternalServerError, err.Error())
+		return
 	}
 	defer db.Close()
 	sqlStr := "select * from user where username=?"
 	user := models.User{}
 	err = db.QueryRow(sqlStr, username).Scan(&user.Id, &user.Username, &user.Password)
 	if err != nil {
-		panic(err)
+		c.String(http.StatusInternalServerError, err.Error())
+		return
 	}
-	output, err := json.Marshal(user)
-	if err != nil {
-		panic(err)
-	}
-	c.Ctx.ResponseWriter.Write(output)
+	c.JSON(http.StatusOK, user)
 }
 
-func (c *SqlInjectionSafe3Controller) Get() {
-	username := c.GetString("username")
-	field := c.GetString("field")
-	o := orm.NewOrm()
+// SqlInjectionSafe3 SQL注入安全示例3 - ORM安全查询
+func SqlInjectionSafe3(c *gin.Context) {
+	username := c.Query("username")
+	field := c.Query("field")
+	engine, err := xorm.NewEngine("mysql", source)
+	if err != nil {
+		c.String(http.StatusInternalServerError, err.Error())
+		return
+	}
+	engine.ShowSQL(true)
 	user := models.User{}
-	cond := orm.NewCondition().And(field+"__icontains", username)
-	qs := o.QueryTable(&models.User{})
-	err := qs.SetCond(cond).One(&user)
+
+	// 构建安全的查询条件
+	session := engine.Where(field+" LIKE ?", "%"+username+"%")
+	found, err := session.Get(&user)
 	if err != nil {
-		panic(err)
+		c.String(http.StatusInternalServerError, err.Error())
+		return
 	}
-	output, err := json.Marshal(user)
-	if err != nil {
-		panic(err)
+	if !found {
+		c.String(http.StatusNotFound, "User not found")
+		return
 	}
-	c.Ctx.ResponseWriter.Write(output)
+	c.JSON(http.StatusOK, user)
 }

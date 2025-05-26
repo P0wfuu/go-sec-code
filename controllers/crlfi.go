@@ -1,15 +1,14 @@
 package controllers
 
 import (
-	beego "github.com/beego/beego/v2/server/web"
+	"net/http"
+
+	"github.com/gin-gonic/gin"
 )
 
-type CRLFSafe1Controller struct {
-	beego.Controller
-}
-
-func (c *CRLFSafe1Controller) Get() {
-	header := c.GetString("header")
-	c.Ctx.ResponseWriter.Header().Set("header", header)
-	c.Ctx.ResponseWriter.Write([]byte(""))
+// CRLFSafe1 CRLF 注入安全示例
+func CRLFSafe1(c *gin.Context) {
+	header := c.Query("header")
+	c.Header("header", header)
+	c.String(http.StatusOK, "")
 }

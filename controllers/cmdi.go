@@ -3,71 +3,64 @@ package controllers
 import (
 	"fmt"
 	"go-sec-code/utils"
+	"net/http"
 	"os/exec"
 
-	beego "github.com/beego/beego/v2/server/web"
+	"github.com/gin-gonic/gin"
 )
 
-type CommandInjectVuln1Controller struct {
-	beego.Controller
-}
-
-type CommandInjectVuln2Controller struct {
-	beego.Controller
-}
-
-type CommandInjectVuln3Controller struct {
-	beego.Controller
-}
-
-type CommandInjectSafe1Controller struct {
-	beego.Controller
-}
-
-func (c *CommandInjectVuln1Controller) Get() {
-	dir := c.GetString("dir")
+// CommandInjectVuln1 命令注入漏洞示例1
+func CommandInjectVuln1(c *gin.Context) {
+	dir := c.Query("dir")
 	input := fmt.Sprintf("ls %s", dir)
 	cmd := exec.Command("bash", "-c", input)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		panic(err)
+		c.String(http.StatusInternalServerError, err.Error())
+		return
 	}
-	c.Ctx.ResponseWriter.Write(out)
+	c.Data(http.StatusOK, "text/plain", out)
 }
 
-func (c *CommandInjectVuln2Controller) Get() {
-	host := c.Ctx.Request.Host
+// CommandInjectVuln2 命令注入漏洞示例2
+func CommandInjectVuln2(c *gin.Context) {
+	host := c.Request.Host
 	input := fmt.Sprintf("curl %s", host)
 	cmd := exec.Command("bash", "-c", input)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		panic(err)
+		c.String(http.StatusInternalServerError, err.Error())
+		return
 	}
-	c.Ctx.ResponseWriter.Write(out)
+	c.Data(http.StatusOK, "text/plain", out)
 }
 
-func (c *CommandInjectVuln3Controller) Get() {
-	repoUrl := c.GetString("repoUrl", "--upload-pack=${touch /tmp/pwnned}")
+// CommandInjectVuln3 命令注入漏洞示例3
+func CommandInjectVuln3(c *gin.Context) {
+	repoUrl := c.DefaultQuery("repoUrl", "--upload-pack=${touch /tmp/pwnned}")
 	out, err := exec.Command("git", "ls-remote", repoUrl, "refs/heads/main").CombinedOutput()
 	if err != nil {
-		panic(err)
+		c.String(http.StatusInternalServerError, err.Error())
+		return
 	}
-	c.Ctx.ResponseWriter.Write(out)
+	c.Data(http.StatusOK, "text/plain", out)
 }
 
-func (c *CommandInjectSafe1Controller) Get() {
-	dir := c.GetString("dir")
+// CommandInjectSafe1 命令注入安全示例1
+func CommandInjectSafe1(c *gin.Context) {
+	dir := c.Query("dir")
 	commandInjectFilter := utils.CommandInjectFilter{}
 	evil := commandInjectFilter.DoFilter(dir)
 	if evil == false {
-		c.Ctx.ResponseWriter.Write([]byte("evil input"))
+		c.String(http.StatusBadRequest, "evil input")
 		return
 	}
 	input := fmt.Sprintf("ls %s", dir)
 	cmd := exec.Command("bash", "-c", input)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		panic(err)
+		c.String(http.StatusInternalServerError, err.Error())
+		return
 	}
-	c.Ctx.ResponseWriter.Write(out)
+	c.Data(http.StatusOK, "text/plain", out)
 }

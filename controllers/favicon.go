@@ -1,19 +1,21 @@
 package controllers
 
 import (
-	"io/ioutil"
+	"net/http"
+	"os"
 
-	beego "github.com/beego/beego/v2/server/web"
+	"github.com/gin-gonic/gin"
 )
 
-type FaviconController struct {
-	beego.Controller
-}
+// 注意：在使用 r.StaticFile("/favicon.ico", "./favicon.ico") 后不需要这个处理函数了
+// 保留这里是为了示例如何在 Gin 中处理静态文件
 
-func (c *FaviconController) Get() {
-	icon, err := ioutil.ReadFile("favicon.ico")
+// Favicon 处理 favicon 请求
+func Favicon(c *gin.Context) {
+	icon, err := os.ReadFile("favicon.ico")
 	if err != nil {
-		panic(err)
+		c.String(http.StatusInternalServerError, "Error reading favicon")
+		return
 	}
-	c.Ctx.ResponseWriter.Write(icon)
+	c.Data(http.StatusOK, "image/x-icon", icon)
 }

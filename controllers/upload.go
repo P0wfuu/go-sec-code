@@ -3,53 +3,64 @@ package controllers
 import (
 	"fmt"
 	"go-sec-code/utils"
+	"net/http"
+	"path/filepath"
 	"time"
 
-	beego "github.com/beego/beego/v2/server/web"
+	"github.com/gin-gonic/gin"
 )
 
-type FileUploadVuln1Controller struct {
-	beego.Controller
-}
-
-type FileUploadSafe1Controller struct {
-	beego.Controller
-}
-
-func (c *FileUploadVuln1Controller) Get() {
-	c.TplName = "fileUpload.tpl"
-}
-
-func (c *FileUploadVuln1Controller) Post() {
-	userid := c.GetString("userid")
-	_, h, err := c.GetFile("file")
-	if err != nil {
-		panic(err)
+// FileUploadVuln1 文件上传漏洞示例
+func FileUploadVuln1(c *gin.Context) {
+	if c.Request.Method == "GET" {
+		c.HTML(http.StatusOK, "fileUpload.tpl", nil)
+		return
 	}
-	savePath := "static/upload/" + userid + fmt.Sprint(time.Now().Unix()) + h.Filename
-	c.SaveToFile("file", savePath)
-	c.Data["savePath"] = savePath
-	c.TplName = "fileUpload.tpl"
+
+	// POST 处理
+	userid := c.PostForm("userid")
+	file, err := c.FormFile("file")
+	if err != nil {
+		c.String(http.StatusInternalServerError, err.Error())
+		return
+	}
+	savePath := filepath.Join("static/upload/", userid+fmt.Sprint(time.Now().Unix())+file.Filename)
+	if err := c.SaveUploadedFile(file, savePath); err != nil {
+		c.String(http.StatusInternalServerError, err.Error())
+		return
+	}
+	c.HTML(http.StatusOK, "fileUpload.tpl", gin.H{
+		"savePath": savePath,
+	})
 }
 
-func (c *FileUploadSafe1Controller) Get() {
-	c.TplName = "fileUpload.tpl"
-}
+// FileUploadSafe1 文件上传安全示例
+func FileUploadSafe1(c *gin.Context) {
+	if c.Request.Method == "GET" {
+		c.HTML(http.StatusOK, "fileUpload.tpl", nil)
+		return
+	}
 
-func (c *FileUploadSafe1Controller) Post() {
-	userid := c.GetString("userid")
+	// POST 处理
+	userid := c.PostForm("userid")
 	fileUploadFilter := utils.FileUploadFilter{}
 	evil := fileUploadFilter.DoFilter(userid)
 	if evil == true {
-		c.Ctx.ResponseWriter.Write([]byte("evil input"))
+		c.String(http.StatusBadRequest, "evil input")
 		return
 	}
-	_, h, err := c.GetFile("file")
+
+	file, err := c.FormFile("file")
 	if err != nil {
-		panic(err)
+		c.String(http.StatusInternalServerError, err.Error())
+		return
 	}
-	savePath := "static/upload/" + userid + fmt.Sprint(time.Now().Unix()) + h.Filename
-	c.SaveToFile("file", savePath)
-	c.Data["savePath"] = savePath
-	c.TplName = "fileUpload.tpl"
+	savePath := filepath.Join("static/upload/", userid+fmt.Sprint(time.Now().Unix())+file.Filename)
+	if err := c.SaveUploadedFile(file, savePath); err != nil {
+		c.String(http.StatusInternalServerError, err.Error())
+		return
+	}
+	c.HTML(http.StatusOK, "fileUpload.tpl", gin.H{
+		"savePath": savePath,
+	})
 }

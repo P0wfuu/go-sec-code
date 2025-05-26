@@ -3,87 +3,77 @@ package controllers
 import (
 	"go-sec-code/utils"
 	"html/template"
-	"io/ioutil"
+	"net/http"
+	"os"
 
-	beego "github.com/beego/beego/v2/server/web"
+	"github.com/gin-gonic/gin"
 )
 
-type XSSVuln1Controller struct {
-	beego.Controller
+// XSSVuln1 XSS 漏洞示例1 - 反射型
+func XSSVuln1(c *gin.Context) {
+	xss := c.DefaultQuery("xss", "hello")
+	c.Header("Content-Type", "text/html")
+	c.String(http.StatusOK, xss)
 }
 
-type XSSVuln2Controller struct {
-	beego.Controller
-}
-
-type XSSVuln3Controller struct {
-	beego.Controller
-}
-
-type XSSVuln4Controller struct {
-	beego.Controller
-}
-
-type XSSSafe1Controller struct {
-	beego.Controller
-}
-
-type XSSSafe2Controller struct {
-	beego.Controller
-}
-
-func (c *XSSVuln1Controller) Get() {
-	xss := c.GetString("xss", "hello")
-	c.Ctx.ResponseWriter.Header().Set("Content-Type", "text/html")
-	c.Ctx.ResponseWriter.Write([]byte(xss))
-}
-
-func (c *XSSVuln2Controller) Get() {
-	xss := c.GetSession("xss")
-	if xss == nil {
-		xss = "hello"
+// XSSVuln2 XSS 漏洞示例2 - 存储型
+func XSSVuln2(c *gin.Context) {
+	if c.Request.Method == "GET" {
+		xss := c.GetString("xss")
+		if xss == "" {
+			xss = "hello"
+		}
+		c.HTML(http.StatusOK, "xss.tpl", gin.H{
+			"xss": template.HTML(xss),
+		})
+		return
 	}
-	c.Data["xss"] = template.HTML(xss.(string))
-	c.TplName = "xss.tpl"
+
+	// POST 处理
+	xss := c.DefaultPostForm("xss", "hello")
+	c.SetCookie("xss", xss, 3600, "/", "", false, false)
+	c.HTML(http.StatusOK, "xss.tpl", gin.H{
+		"xss": template.HTML(xss),
+	})
 }
 
-func (c *XSSVuln3Controller) Get() {
-	file, err := ioutil.ReadFile("static/xss/poc.svg")
+// XSSVuln3 XSS 漏洞示例3 - SVG
+func XSSVuln3(c *gin.Context) {
+	file, err := os.ReadFile("static/xss/poc.svg")
 	if err != nil {
-		panic(err)
+		c.String(http.StatusInternalServerError, err.Error())
+		return
 	}
-	c.Ctx.ResponseWriter.Write(file)
+	c.Data(http.StatusOK, "image/svg+xml", file)
 }
 
-func (c *XSSVuln4Controller) Get() {
-	file, err := ioutil.ReadFile("static/xss/poc.pdf")
+// XSSVuln4 XSS 漏洞示例4 - PDF
+func XSSVuln4(c *gin.Context) {
+	file, err := os.ReadFile("static/xss/poc.pdf")
 	if err != nil {
-		panic(err)
+		c.String(http.StatusInternalServerError, err.Error())
+		return
 	}
-	c.Ctx.ResponseWriter.Header().Set("Content-Security-Policy", `default-src 'self';`)
-	c.Ctx.ResponseWriter.Write(file)
+	c.Header("Content-Security-Policy", `default-src 'self';`)
+	c.Data(http.StatusOK, "application/pdf", file)
 }
 
-func (c *XSSVuln2Controller) Post() {
-	xss := c.GetString("xss", "hello")
-	c.SetSession("xss", xss)
-	c.Data["xss"] = template.HTML(xss)
-	c.TplName = "xss.tpl"
-}
-
-func (c *XSSSafe1Controller) Get() {
-	xss := c.GetString("xss", "hello")
+// XSSSafe1 XSS 安全示例1 - 过滤
+func XSSSafe1(c *gin.Context) {
+	xss := c.DefaultQuery("xss", "hello")
 	xssFilter := utils.XSSFilter{}
 	xss = xssFilter.DoFilter(xss)
-	c.Ctx.ResponseWriter.Header().Set("Content-Type", "text/html")
-	c.Ctx.ResponseWriter.Write([]byte(xss))
+	c.Header("Content-Type", "text/html")
+	c.String(http.StatusOK, xss)
 }
 
-func (c *XSSSafe2Controller) Get() {
-	file, err := ioutil.ReadFile("static/xss/poc.svg")
+// XSSSafe2 XSS 安全示例2 - CSP
+func XSSSafe2(c *gin.Context) {
+	file, err := os.ReadFile("static/xss/poc.svg")
 	if err != nil {
-		panic(err)
+		c.String(http.StatusInternalServerError, err.Error())
+		return
 	}
-	c.Ctx.ResponseWriter.Header().Set("Content-Security-Policy", `default-src 'self';`)
-	c.Ctx.ResponseWriter.Write(file)
+	c.Header("Content-Security-Policy", `default-src 'self';`)
+	c.Data(http.StatusOK, "image/svg+xml", file)
 }

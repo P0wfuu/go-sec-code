@@ -3,41 +3,40 @@ package controllers
 import (
 	"bytes"
 	"html/template"
-	"io/ioutil"
+	"io"
+	"net/http"
 	"os"
 
 	"github.com/Masterminds/sprig"
-	beego "github.com/beego/beego/v2/server/web"
+	"github.com/gin-gonic/gin"
 )
 
-type SSTIVuln1Controller struct {
-	beego.Controller
-}
-
-type SSTISafe1Controller struct {
-	beego.Controller
-}
-
-func (c *SSTIVuln1Controller) Get() {
+// SSTIVuln1 SSTI 漏洞示例
+func SSTIVuln1(c *gin.Context) {
 	os.Setenv("go-sec-code-secret-key", "b81024f158eefcf60792ae9df9524f82")
-	usertemplate := c.GetString("template", "please send your template")
+	usertemplate := c.DefaultQuery("template", "please send your template")
 	t := template.New("ssti").Funcs(sprig.FuncMap())
 	t, _ = t.Parse(usertemplate)
 	buff := bytes.Buffer{}
 	err := t.Execute(&buff, struct{}{})
 	if err != nil {
-		panic(err)
+		c.String(http.StatusInternalServerError, err.Error())
+		return
 	}
-	data, err := ioutil.ReadAll(&buff)
+	data, err := io.ReadAll(&buff)
 	if err != nil {
-		panic(err)
+		c.String(http.StatusInternalServerError, err.Error())
+		return
 	}
-	c.Data["usertemplate"] = string(data)
-	c.TplName = "ssti.tpl"
+	c.HTML(http.StatusOK, "ssti.tpl", gin.H{
+		"usertemplate": string(data),
+	})
 }
 
-func (c *SSTISafe1Controller) Get() {
-	usertemplate := c.GetString("template", "please send your template")
-	c.Data["usertemplate"] = usertemplate
-	c.TplName = "ssti.tpl"
+// SSTISafe1 SSTI 安全示例
+func SSTISafe1(c *gin.Context) {
+	usertemplate := c.DefaultQuery("template", "please send your template")
+	c.HTML(http.StatusOK, "ssti.tpl", gin.H{
+		"usertemplate": usertemplate,
+	})
 }

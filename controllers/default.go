@@ -1,18 +1,18 @@
 package controllers
 
 import (
-	beego "github.com/beego/beego/v2/server/web"
+	"net/http"
+
+	"github.com/gin-gonic/gin"
 )
 
-type MainController struct {
-	beego.Controller
+// MainPage 主页处理函数
+func MainPage(c *gin.Context) {
+	c.HTML(http.StatusOK, "index.tpl", nil)
 }
 
-func (c *MainController) Get() {
-	c.TplName = "index.tpl"
-}
-
-func (c *MainController) Post() {
-	foo := c.GetString("foo")
-	c.Ctx.ResponseWriter.Write([]byte(foo))
+// MainPagePost 处理POST请求
+func MainPagePost(c *gin.Context) {
+	foo := c.Query("foo")
+	c.String(http.StatusOK, foo)
 }
